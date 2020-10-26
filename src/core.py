@@ -121,6 +121,7 @@ def answer_question(query: str, context: str):
 	'''
 	{'score': 0.5135612454720828, 'start': 35, 'end': 59, 'answer': 'huggingface/transformers'}
 	'''
+	
 	#test_context = ''' What is your name? My name is satti.
 	#              What is your purpose? I have no idea.
 	#          '''
@@ -287,18 +288,8 @@ if __name__ == '__main__':
 		#print("Upvote score is %d".format( guess_upvote_score(Input)))
 
 		Input = Input.lower() #TODO should i keep this?
-		if 'open google' in Input:
-			talk('sure')
-			webbrowser.open('www.google.com')
-		elif 'open gmail' in Input:
-			talk('sure')
-			webbrowser.open('www.gmail.com')
 
-		elif 'open youtube' in Input:
-			talk('sure')
-			webbrowser.open('www.youtube.com')
-
-		elif "what\'s up" in Input or 'how are you' in Input:
+		if "what\'s up" in Input or 'how are you' in Input:
 			setReplies = ['Just doing some stuff!', 'I am good!', 'Nice!', 'I am amazing and full of power']
 			talk(random.choice(setReplies))
 
@@ -340,22 +331,6 @@ if __name__ == '__main__':
 			sys.exit()
 
 
-		elif 'play music' in Input:
-			music_folder = 'C:\\Users\\Public\\Music\\'
-			music = ['friends']
-			random_music = music_folder + random.choice(music) + '.mp3'
-			os.system(random_music)
-
-			talk('Okay, here is your music! Enjoy!')
-
-		elif 'show images' in Input:
-			images_folder = 'C:\\Users\\Public\\Pictures\\'
-			images = ['kunal']
-			random_images = images_folder + random.choice(images) + '.jpeg'
-			os.system(random_images)
-
-			talk('Okay, here are your images! Have Fun!')
-
 		elif 'smalltalk' or 'what do you think'  in Input:
 			output = smalltalk(Input)
 			recipient = GivenCommand()
@@ -364,14 +339,20 @@ if __name__ == '__main__':
 			with open(r'datasette_log', 'a') as f:
 				writer = csv.writer(f)
 				writer.writerow(fields)
-t
-		elif 'can i text you' or 'what is your phone number':
-			talk('')
+		elif 'explain' in Input:
+			logger.debug("longformer is being used")
+			explanation = longformer(Input)
+			fields=[datetime.datetime.utcnow() , Input,explanation, sentiment]
+			with open(r'datasette_log', 'a') as f:
+				writer = csv.writer(f)
+				writer.writerow(fields)
+		elif 'can i text you' or 'what is your phone number' in Input:
+			talk('Yea lets not do that K?')
 
 		else:
 			Input = Input
 			#Default to smalltalk if we can't figure out what else to do
-			smalltalk(Input)
+			
 
 
 			talk('Searching...')
@@ -394,7 +375,7 @@ t
 					talk("searching on google for " + Input)
 					say = Input.replace(' ', '+')
 					webbrowser.open('https://www.google.co.in/search?q=' + Input)
-
-
-
+		
+		talk('Sorry I got confused')
+		smalltalk(Input) #If we can't figure out anything go back to smalltalk.
 		#talk('Next Command! Please!')
