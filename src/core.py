@@ -12,18 +12,42 @@ import random
 import csv
 from transformers import pipeline
 from transformers import BlenderbotSmallTokenizer, BlenderbotForConditionalGeneration
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-
-from transformers import AutoTokenizer, AutoModelForCausalLM
-
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from transformers import AutoModelForSequenceClassification
+from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModel,  AutoModelForSequenceClassification
 from transformers import LongformerModel, LongformerTokenizer
 from transformers import ReformerModelWithLMHead
 from transformers import LongformerTokenizer, LongformerForQuestionAnswering
 import torch
 import pandas
+from dataclasses import dataclass
+import rpa as r
 
+from typing import List, Optional
+from pydantic import BaseModel
+import uuid
+from datetime import datetime
 
+local_microphone = True
+local_speaker    = True
+
+def can_you_type_that_out(query: str):
+	r.init(visual_automation = True, chrome_browser = False)
+	r.keyboard('[cmd][space]')
+	r.keyboard('safari[enter]')
+	r.keyboard('[cmd]t')
+	r.keyboard('joker[enter]')
+	r.wait(2.5)
+	r.snap('page.png', 'results.png')
+	r.close()
+
+class Query(BaseModel):
+	uuid:         str = uuid.uuid4()
+	utterance_ts: datetime
+	input:        str
+	output:       str
+	sentiment:    str
+	score:        float
+	
 
 engine = pyttsx3.init('nsss')
 
@@ -40,7 +64,7 @@ def talk(audio):
 
 
 def greetMe():
-	CurrentHour = int(datetime.datetime.now().hour)
+	CurrentHour = int(datetime.now().hour)
 	if CurrentHour >= 0 and CurrentHour < 12:
 		talk('Good Morning!')
 
@@ -66,7 +90,12 @@ talk('Hey, it is Saati!')
 
 
 def journal_sleep(response: str):
-	talk(' How well did you sleep ? ')
+	CurrentHour = int(datetime.now().hour)
+	if CurrentHour >= 0 and CurrentHour < 9:
+		talk(' How well did you sleep ? ')
+	elif CurrentHour >= 10 and CurrentHour <= 12:
+		talk(' Did you sleep in? ')
+	return response 
 
 #Scoring input as negative / positive
 
@@ -100,7 +129,7 @@ def compute_sentiment(utterance: str) -> dict:
 	
 	nlp = pipeline("sentiment-analysis")
 	score = nlp(utterance)[0]
-	talk("The score was {}".format( score))
+	#talk("The score was {}".format(score))
 	return score
 
 def guess_upvote_score(ctx: str):
@@ -117,19 +146,43 @@ def guess_upvote_score(ctx: str):
 		return torch.sigmoid(result.logits)
 	return __score(ctx, response)
 
+#def get_session_context(query: Optional) -> str:
+context = ''' My name is satti. I have no idea of my purpose. I am programmed in python. I am release under the apache software licence.
+	      ''' #TODO make this a redis query.
+
+def reinforcer(utterance: str, reward: float) -> any:
+  # initialize trainer
+  ppo_config = {'batch_size': 1, 'forward_batch_size': 1}
+  ppo_trainer = PPOTrainer(gpt2_model, gpt2_model_ref, **ppo_config)
+
+  # encode a query
+  query_txt = utterance
+  query_tensor = gpt2_tokenizer.encode(query_txt, return_tensors="pt")
+
+  # get model response
+  response_tensor  = respond_to_batch(gpt2_model, query_tensor)
+  response_txt = gpt2_tokenizer.decode(response_tensor[0,:])
+
+  # define a reward for response
+  # (this could be any reward such as human feedback or output from another model)
+  reward = torch.tensor([reward]) 
+
+  # train model with ppo
+  train_stats = ppo_trainer.step(query_tensor, response_tensor, reward)
+
+  return train_stats
+
+
 def answer_question(query: str, context: str):
 	'''
 	{'score': 0.5135612454720828, 'start': 35, 'end': 59, 'answer': 'huggingface/transformers'}
 	'''
 	
-	#test_context = ''' What is your name? My name is satti.
-	#              What is your purpose? I have no idea.
-	#          '''
 
 	question_answerer = pipeline('question-answering')
 	answer_to_question = question_answerer({
 		'question': query,
-		'context': 'Pipelines have been included in the huggingface/transformers repository'
+		'context': context
 		})
 	talk(answer_to_question.get('answer', 'I dont know'))
 	return (query, answer_to_question['answer'])
@@ -170,6 +223,8 @@ def reformer(question: str):
 	return decoded
 
 ##End Reformer
+
+
 
 
 #summarizer = pipeline('summarization')
@@ -219,6 +274,11 @@ def longformer(TO_SUMMARIZE: str):
 	pooled_output = outputs.pooler_output
 	talk(pooled_output)
 	return outputs
+
+
+def gpt2_reinforcment(UTTERANCE: str):
+	tokenizer = AutoTokenizer.from_pretrained("lvwerra/gpt2-imdb-ctrl")
+	model = AutoModel.from_pretrained("lvwerra/gpt2-imdb-ctrl")
 
 def poems(input_text: str):# run_name='/Users/r2q2/Projects/waifu2020/src/models'):
 	talk("hey let me think about that")
@@ -270,12 +330,14 @@ def GivenCommand():
 		audio = k.listen(source)
 	try:
 		Input = k.recognize_google(audio, language='en-us')
+		
 		print('You: ' + Input + '\n')
 
 	except sr.UnknownValueError:
 		talk('Gomen! I didn\'t get that! Try typing it here!')
 		Input = str(input('Command: '))
 
+	sentiment = compute_sentiment(Input)
 	return Input
 
 
@@ -283,13 +345,25 @@ if __name__ == '__main__':
 
 	while True:
 
+		#Configuration
+		recordSleep = True
+		
 		Input = GivenCommand()
 		
 		#print("Upvote score is %d".format( guess_upvote_score(Input)))
 
 		Input = Input.lower() #TODO should i keep this?
 
-		if "what\'s up" in Input or 'how are you' in Input:
+		if 'i am tired 'in Input:
+			#answer = journal_sleep(Input)
+			sentiment = compute_sentiment(Input)
+
+			fields=[datetime.utcnow() , Input, answer, sentiment]
+			with open(r'datasette_log', 'a') as f:
+				writer = csv.writer(f)
+				writer.writerow(fields)
+		
+		elif "what\'s up" in Input or 'how are you' in Input:
 			setReplies = ['Just doing some stuff!', 'I am good!', 'Nice!', 'I am amazing and full of power']
 			talk(random.choice(setReplies))
 
@@ -334,20 +408,20 @@ if __name__ == '__main__':
 		elif 'smalltalk' or 'what do you think'  in Input:
 			output = smalltalk(Input)
 			recipient = GivenCommand()
-			sentiment = compute_sentiment(Input)
-			fields=[datetime.datetime.utcnow() , Input, output, sentiment]
+			
+			fields=[datetime.utcnow() , Input, output, sentiment]
 			with open(r'datasette_log', 'a') as f:
 				writer = csv.writer(f)
 				writer.writerow(fields)
 		elif 'explain' in Input:
 			logger.debug("longformer is being used")
 			explanation = longformer(Input)
-			fields=[datetime.datetime.utcnow() , Input,explanation, sentiment]
+			fields=[datetime.utcnow() , Input,explanation, sentiment]
 			with open(r'datasette_log', 'a') as f:
 				writer = csv.writer(f)
 				writer.writerow(fields)
 		elif 'can i text you' or 'what is your phone number' in Input:
-			talk('Yea lets not do that K?')
+			talk('1 778 403 5044')
 
 		else:
 			Input = Input
