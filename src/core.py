@@ -276,9 +276,11 @@ def longformer(TO_SUMMARIZE: str):
 	return outputs
 
 
-def gpt2_reinforcment(UTTERANCE: str):
-	tokenizer = AutoTokenizer.from_pretrained("lvwerra/gpt2-imdb-ctrl")
-	model = AutoModel.from_pretrained("lvwerra/gpt2-imdb-ctrl")
+##############################################################################
+# def gpt2_reinforcment(UTTERANCE: str):									 #
+# 	tokenizer = AutoTokenizer.from_pretrained("lvwerra/gpt2-imdb-ctrl")		 #
+# 	model = AutoModel.from_pretrained("lvwerra/gpt2-imdb-ctrl")				 #
+##############################################################################
 
 def poems(input_text: str):# run_name='/Users/r2q2/Projects/waifu2020/src/models'):
 	talk("hey let me think about that")
@@ -321,8 +323,67 @@ def poems(input_text: str):# run_name='/Users/r2q2/Projects/waifu2020/src/models
 	#TODO  add a feedback question here
 
 
+	
+########################################################################
+# from mic_vad_streaming import ingest								   #
+# def GetInput():													   #
+# 	parameters = {'model' : '',										   #
+# 				  'scorer' : '../deepspeech-0.9.1-models.scorer',	   #
+# 				  }													   #
+# 	voice_ingest(../)												   #
+########################################################################
 
+
+def voice_ingest(model, scorer, sample_rate=16000, vad_aggressiveness=3):
+    # Load DeepSpeech model
+    if os.path.isdir(ARGS.model):
+        model_dir = ARGS.model
+        ARGS.model = os.path.join(model_dir, 'output_graph.pb')
+        ARGS.scorer = os.path.join(model_dir, ARGS.scorer)
+
+    talk('Initializing model...')
+    logging.info("ARGS.model: %s", ARGS.model)
+    model = deepspeech.Model(ARGS.model)
+    if ARGS.scorer:
+        logging.info("ARGS.scorer: %s", ARGS.scorer)
+        model.enableExternalScorer(ARGS.scorer)
+
+    # Start audio with VAD
+    vad_audio = VADAudio(aggressiveness=ARGS.vad_aggressiveness,
+                         device=ARGS.device,
+                         input_rate=ARGS.rate,
+                         file=ARGS.file)
+    print("Listening (ctrl-C to exit)...")
+    frames = vad_audio.vad_collector()
+
+    # Stream from microphone to DeepSpeech using VAD
+    spinner = None
+    if not ARGS.nospinner:
+        spinner = Halo(spinner='line')
+    stream_context = model.createStream()
+    wav_data = bytearray()
+    for frame in frames:
+        if frame is not None:
+            if spinner: spinner.start()
+            logging.debug("streaming frame")
+            stream_context.feedAudioContent(np.frombuffer(frame, np.int16))
+            if ARGS.savewav: wav_data.extend(frame)
+        else:
+            if spinner: spinner.stop()
+            logging.debug("end utterence")
+            if ARGS.savewav:
+                vad_audio.write_wav(os.path.join(ARGS.savewav, datetime.now().strftime("savewav_%Y-%m-%d_%H-%M-%S_%f.wav")), wav_data)
+                wav_data = bytearray()
+            text = stream_context.finishStream()
+            print("Recognized: %s" % text)
+            if ARGS.keyboard:
+                from pyautogui import typewrite
+                typewrite(text)
+            stream_context = model.createStream()
+
+	
 def GivenCommand():
+	
 	k = sr.Recognizer()
 	with sr.Microphone() as source:
 		print("Listening...")
@@ -337,7 +398,7 @@ def GivenCommand():
 		talk('Gomen! I didn\'t get that! Try typing it here!')
 		Input = str(input('Command: '))
 
-	sentiment = compute_sentiment(Input)
+	
 	return Input
 
 
@@ -363,13 +424,13 @@ if __name__ == '__main__':
 				writer = csv.writer(f)
 				writer.writerow(fields)
 		
-		elif "what\'s up" in Input or 'how are you' in Input:
-			setReplies = ['Just doing some stuff!', 'I am good!', 'Nice!', 'I am amazing and full of power']
-			talk(random.choice(setReplies))
+		#elif "what\'s up" in Input or 'how are you' in Input:
+		#	setReplies = ['Just doing some stuff!', 'I am good!', 'Nice!', 'I am amazing and full of power']
+		#	talk(random.choice(setReplies))
 
-		elif "who are you" in Input or 'where are you' in Input or 'what are you' in Input:
-			setReplies = [' I am Saati', 'In your system', 'I am an example of AI']
-			talk(random.choice(setReplies))
+		#elif "who are you" in Input or 'where are you' in Input or 'what are you' in Input:
+		#	setReplies = [' I am Saati', 'In your system', 'I am an example of AI']
+		#	talk(random.choice(setReplies))
 
 		elif 'email' in Input:
 			talk('Who is the recipient? ')
@@ -408,7 +469,8 @@ if __name__ == '__main__':
 		elif 'smalltalk' or 'what do you think'  in Input:
 			output = smalltalk(Input)
 			recipient = GivenCommand()
-			
+			sentiment = compute_sentiment(Input)
+
 			fields=[datetime.utcnow() , Input, output, sentiment]
 			with open(r'datasette_log', 'a') as f:
 				writer = csv.writer(f)
@@ -425,7 +487,6 @@ if __name__ == '__main__':
 
 		else:
 			Input = Input
-			#Default to smalltalk if we can't figure out what else to do
 			
 
 
@@ -450,6 +511,6 @@ if __name__ == '__main__':
 					say = Input.replace(' ', '+')
 					webbrowser.open('https://www.google.co.in/search?q=' + Input)
 		
-		talk('Sorry I got confused')
-		smalltalk(Input) #If we can't figure out anything go back to smalltalk.
+			talk("Sorry I can't provide a good response")
+		
 		#talk('Next Command! Please!')
