@@ -485,6 +485,7 @@ if __name__ == '__main__':
 		elif 'can i text you' or 'what is your phone number' in Input:
 			talk('1 778 403 5044')
 
+			
 		else:
 			Input = Input
 			
