@@ -25,3 +25,6 @@ def talk(text: str = 'beep beep boop boop'):
     rate = 22050
     write("audio.wav", rate, audio_numpy)
     return audio
+
+def main():
+    talk()
