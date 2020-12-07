@@ -13,7 +13,6 @@ def talk(text: str = 'beep beep boop boop'):
     tacotron2.eval()
     # preprocessing
     # preprocessing
-    import pdb; pdb.set_trace()
     sequence = np.array(tacotron2.text_to_sequence(text, ['english_cleaners']))[None, :]
     sequence = torch.from_numpy(sequence).to(device='cuda', dtype=torch.int64)
 
