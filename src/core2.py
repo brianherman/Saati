@@ -6,6 +6,7 @@ from transformers import (TFAutoModelWithLMHead,
                          Conversation)
 from transformers import BlenderbotSmallTokenizer, BlenderbotForConditionalGeneration
 from transformers import pipeline
+import uuid
 
 from typing import List
 
@@ -21,10 +22,17 @@ import random
 from datetime import datetime
 # Set up logging; The basic log level will be DEBUG
 import logging
+import random
+
+import pyttsx3
+import speech_recognition as sr
+
 logging.basicConfig(level=logging.INFO)
 
+engine = pyttsx3.init("nsss")
 
-import random
+
+
 class Saati(object):
 
     # Define some states. Most of the time, narcoleptic superheroes are just like
@@ -39,7 +47,6 @@ class Saati(object):
     
     
     def __init__(self, name, debugMode=False):
-
         # No anonymous superheroes on my watch! Every narcoleptic superhero gets
         # a name. Any name at all. SleepyMan. SlumberGirl. You get the idea.
         self.name = name
@@ -65,28 +72,13 @@ class Saati(object):
               'hangingout',
               'sleeping',
               'wake_up',
-               'leave']
-        
+              'leave']
         self.machine = Machine(model=self, states=states, initial='initializemodels')
-        
         self.machine.add_ordered_transitions()
-          
-        
-        
-        #'choose', #ToDO add choice
-        
-        #self.machine.add_transition(trigger='initialize_models', source='meetup', dest='dating', before='reply')
-        
-        #self.machine.add_transition(trigger='dating', source='meetup', dest='sleeping', after='reply')
-        
-        #self.machine.add_transition(trigger='wake_up', source='sleeping', dest='conversation', after='reply')#, conditions=['leave'])
-    
-   
-
-
-    def GivenCommand():
+              
+    def GivenCommand(test_mode=False):
         Input = ""
-        if True:
+        if test_mode:
             Input = input("Resp>>")
             return Input
         else:
@@ -97,9 +89,7 @@ class Saati(object):
                 audio = k.listen(source)
             try:
                 Input = k.recognize_google(audio, language='en-us')
-
-                print('You: ' + Input + '\n')
-
+                talk('You: ' + Input + '\n')
             except sr.UnknownValueError:
                 talk('Gomen! I didn\'t get that! Try typing it here!')
                 Input = str(input('Command: '))
@@ -139,21 +129,11 @@ def is_a_question(utterance: str) -> bool:
     return false
 
 
+def talk(audio):
+	print("Saati: " + audio)
+	engine.say(audio)
+	engine.runAndWait()
 
-def what_do_you_think(ctx: str):                                                                                                                                
-    """                                                                                                                                                          
-    Add a reddit / tweet composer and it will guess upvote score?                                                                                                
-    """                                                                                                                                                          
-    model_card = "microsoft/DialogRPT-updown"  # you can try other model_card listed in the table above                                                          
-    tokenizer = AutoTokenizer.from_pretrained(model_card)                                                                                                        
-    model = AutoModelForSequenceClassification.from_pretrained(model_card)                                                                                       
-                                                                                                                                                                 
-    def __score(cxt, hyp):                                                                                                                                       
-        model_input = tokenizer.encode(cxt + "<|endoftext|>" + hyp, return_tensors="pt")                                                                         
-        result = model(model_input, return_dict=True)                                                                                                            
-        return torch.sigmoid(result.logits)                                                                                                                      
-                                                                                                                                                                 
-    return __score(ctx, response)   
 
 
 def GivenCommand(test_mode=False):
@@ -168,18 +148,14 @@ def GivenCommand(test_mode=False):
             audio = k.listen(source)
         try:
             Input = k.recognize_google(audio, language='en-us')
-
             print('You: ' + Input + '\n')
-
         except sr.UnknownValueError:
             talk('Gomen! I didn\'t get that! Try typing it here!')
             Input = str(input('Command: '))
-
-
     return Input    
+
 def compute_sentiment(utterance: str) -> float:
         nlp = pipeline("sentiment-analysis")
-
         result = nlp(utterance)
         score = result[0]['score']
         if result[0]['label'] == 'NEGATIVE':
@@ -188,16 +164,15 @@ def compute_sentiment(utterance: str) -> float:
         # talk("The score was {}".format(score))
         return score
 
-def reply():
-	import uuid
 
-    sentiment = 0
-    instance = Saatiuuid.uuidv4())
-    while instance.sentiment > 0  :
+def reply():
+    sentiment = 1
+    instance = Saati(uuid.uuid4())
+    while sentiment > 0  :
         
         instance.get_graph().draw('my_state_diagram.png', prog='dot')
         responses = []
-        user_input = GivenCommand() 
+        #user_input = GivenCommand() 
         
         logging.info('Computing reply')
 
@@ -205,14 +180,21 @@ def reply():
             user_input = GivenCommand() 
             #input("Resp>>")
             responses.append(smalltalk(user_input)) 
-            instance.sentiment =+ compute_sentiment(user_input) #compute_sentiment(user_input[0])['score']
+            sentiment = sentiment +  compute_sentiment(user_input) #compute_sentiment(user_input[0])['score']
             print(responses, sentiment, instance.state)
             if sentiment > 0:
                 instance.next_state()
             else:
                 print("Hey, i don't think this will work out.")
                 #instance.
-                #return
-reply()
+                return
+
+if __name__ == "__main__":
+	reply()
+    #data = "My data read from the Web"
+    #print(data)
+    #modified_data = process_data(data)
+    #print(modified_data)
+
 
 
