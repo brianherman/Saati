@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from transformers import (TFAutoModelWithLMHead, 
 						 AutoTokenizer, 
 						 pipeline, 
@@ -96,29 +98,15 @@ class Saati(object):
 
 		return Input
 
-	#@property
-	#def transition(self):
-	#	 if self.leave_threshold > 1:
-	#		 print('Hey, I don t think this is working out')
-	#		 return False
-		
-	#	 if self.love_vector > 2 and self.leave_threshold > 1:
-	#		 return True 
 	
 def smalltalk(utterance: str) -> List[str]:
-	mname = "facebook/blenderbot-90M"
+	mname = "facebook/blenderbot-3B"
 	model = BlenderbotForConditionalGeneration.from_pretrained(mname)
 	tokenizer = BlenderbotSmallTokenizer.from_pretrained(mname)
 	inputs = tokenizer([utterance], return_tensors="pt")
 	reply_ids = model.generate(**inputs)
 	responses = [tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=True) for g in reply_ids]
 	return responses
-	
-   
-		
-
-		#return responses
-
 
 def is_a_question(utterance: str) -> bool:
 	START_WORDS = ['who', 'what', 'when', 'where', 'why', 'how', 'is', 'can', 'does', 'do']
