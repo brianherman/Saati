@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-
+import to™rch
+import numpy as np
+from scipy.io.wavfile import write
 from transformers import (TFAutoModelWithLMHead, 
 						 AutoTokenizer, 
 						 pipeline, 
-						 BlenderbotSmallTokenizer, 
+						 BlenderbotTokenizer, 
 						 BlenderbotForConditionalGeneration, 
 						 Conversation)
 from transformers import BlenderbotSmallTokenizer, BlenderbotForConditionalGeneration
 from transformers import pipeline
 import uuid
-
 from typing import List
 
-#NOTE only tested on 3.4.0 of transformers
 
 #!pip install transitions[diagrams] 
 #!pip install graphviz pygraphviz 
@@ -24,10 +24,12 @@ import random
 from datetime import datetime
 # Set up logging; The basic log level will be DEBUG
 import logging
-import random
-
 import pyttsx3
 import speech_recognition as sr
+import torch
+import numpy as np
+#.io.wavefile import write
+from playsound import playsound
 
 logging.basicConfig(level=logging.INFO)
 
@@ -35,18 +37,7 @@ engine = pyttsx3.init("nsss")
 
 
 
-class Saati(object):
-
-	# Define some states. Most of the time, narcoleptic superheroes are just like
-	# everyone else. Except for...
-	#Note we should have first_impression be timedlocked by about an hour or less? 
-	
-	#states = ['asleep', 'first_impression' ,'morning', 'first_meet', 'game_over',
-	#		   'hanging out', 'hungry','having fun','emberrased' , 'sweaty', 'saving the world', 
-	#		   'affection', 'indifferent', 'what_should_we_do', 'conversation']
-	
-   
-	
+class Saati(object):	
 	
 	def __init__(self, name, debugMode=False):
 		# No anonymous superheroes on my watch! Every narcoleptic superhero gets
@@ -76,6 +67,9 @@ class Saati(object):
 			  'leave']
 		self.machine = Machine(model=self, states=states, initial='initializemodels')
 		self.machine.add_ordered_transitions()
+		# Initialize models
+
+
 			  
 	def GivenCommand(test_mode=False):
 		Input = ""
@@ -97,12 +91,13 @@ class Saati(object):
 
 
 		return Input
+	
 
 	
 def smalltalk(utterance: str) -> List[str]:
 	mname = "facebook/blenderbot-3B"
 	model = BlenderbotForConditionalGeneration.from_pretrained(mname)
-	tokenizer = BlenderbotSmallTokenizer.from_pretrained(mname)
+	tokenizer = BlenderbotTokenizer.from_pretrained(mname)
 	inputs = tokenizer([utterance], return_tensors="pt")
 	reply_ids = model.generate(**inputs)
 	responses = [tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=True) for g in reply_ids]
@@ -116,10 +111,28 @@ def is_a_question(utterance: str) -> bool:
 	return false
 
 
-def talk(audio):
-	print("Saati: " + audio)
-	engine.say(audio)
-	engine.runAndWait()
+def talk(text: str):
+	waveglow = torch.hub.load('nvidia/DeepLearningExamples:torchhub', 'nvidia_waveglow')
+	waveglow = waveglow.remove_weightnorm(waveglow)
+	waveglow = waveglow.to('cpu')
+	waveglow.eval()
+	tacotron2 = torch.hub.load('nvidia/DeepLearningExamples:torchhub', 'nvidia_tacotron2')
+	tacotron2 = tacotron2.to('cpu')
+	tacotron2.eval()
+	# preprocessing
+	sequence = np.array(tacotron2.text_to_sequence(text, ['english_cleaners']))[None, :]
+	sequence = torch.from_numpy(sequence).to(device='cuda', dtype=torch.int64)
+
+	# run the models
+	with torch.no_grad():
+		_, mel, _, _ = tacotron2.infer(sequence)
+		audio = waveglow.infer(mel)
+		audio_numpy = audio[0].data.cpu().numpy()
+		rate = 22050
+		#write("audio.wav", rate, audio_numpy)
+		playsound('audio.wav')
+
+		return audio
 
 
 
@@ -155,7 +168,7 @@ def compute_sentiment(utterance: str) -> float:
 def reply():
 	sentiment = 1
 	instance = Saati(uuid.uuid4())
-	while sentiment > 0	 :
+	while sentiment > 0:
 		
 		instance.get_graph().draw('my_state_diagram.png', prog='dot')
 		responses = []
@@ -166,7 +179,6 @@ def reply():
 			user_input = GivenCommand() 
 			#input("Resp>>")
 			responce = smalltalk(user_input)[0]
-			import pdb; pdb.set_trace()
 			talk(responce)
 			responses.append(responce) 
 			sentiment = sentiment +	 compute_sentiment(user_input) #compute_sentiment(user_input[0])['score']  
