@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import to™rch
+import torch
 import numpy as np
 from scipy.io.wavfile import write
 from transformers import (TFAutoModelWithLMHead, 
@@ -14,6 +14,7 @@ import uuid
 from typing import List
 
 
+#!pip install streamlit
 #!pip install transitions[diagrams] 
 #!pip install graphviz pygraphviz 
 #!brew install graphviz
@@ -28,8 +29,9 @@ import pyttsx3
 import speech_recognition as sr
 import torch
 import numpy as np
-#.io.wavefile import write
-from playsound import playsound
+import simpleaudio as sa
+
+import streamlit as st
 
 logging.basicConfig(level=logging.INFO)
 
@@ -67,131 +69,167 @@ class Saati(object):
 			  'leave']
 		self.machine = Machine(model=self, states=states, initial='initializemodels')
 		self.machine.add_ordered_transitions()
+		self.machine.add_transition(trigger='friendzone', source='*', dest=None)
 		# Initialize models
 
 
 			  
-	def GivenCommand(test_mode=False):
-		Input = ""
-		if test_mode:
-			Input = input("Resp>>")
-			return Input
-		else:
-			k = sr.Recognizer()
-			with sr.Microphone() as source:
-				print("Listening...")
-				k.pause_threshold = 1
-				audio = k.listen(source)
-			try:
-				Input = k.recognize_google(audio, language='en-us')
-				talk('You: ' + Input + '\n')
-			except sr.UnknownValueError:
-				talk('Gomen! I didn\'t get that! Try typing it here!')
-				Input = str(input('Command: '))
+def GivenCommand(test_mode=False):
+    Input = ""
+    if test_mode:
+        Input = input("Resp>>")
+        return Input
+    else:
+        k = sr.Recognizer()
+        with sr.Microphone() as source:
+            print("Listening...")
+            k.pause_threshold = 1
+            audio = k.listen(source)
+        try:
+            Input = k.recognize_google(audio, language='en-us')
+            talk('You: ' + Input + '\n')
+        except sr.UnknownValueError:
+            talk('Gomen! I didn\'t get that! Try typing it here!')
+            Input = str(input('Command: '))
+    return Input
+    
 
-
-		return Input
-	
-
-	
+    
 def smalltalk(utterance: str) -> List[str]:
-	mname = "facebook/blenderbot-3B"
-	model = BlenderbotForConditionalGeneration.from_pretrained(mname)
-	tokenizer = BlenderbotTokenizer.from_pretrained(mname)
-	inputs = tokenizer([utterance], return_tensors="pt")
-	reply_ids = model.generate(**inputs)
-	responses = [tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=True) for g in reply_ids]
-	return responses
+    logging.info('starting smalltalk')
+    mname = "facebook/blenderbot-3B"
+    model = BlenderbotForConditionalGeneration.from_pretrained(mname)
+    tokenizer = BlenderbotTokenizer.from_pretrained(mname)
+    inputs = tokenizer([utterance], return_tensors="pt")
+    reply_ids = model.generate(**inputs)
+    responses = [tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=True) for g in reply_ids]
+    return responses
 
 def is_a_question(utterance: str) -> bool:
-	START_WORDS = ['who', 'what', 'when', 'where', 'why', 'how', 'is', 'can', 'does', 'do']
-	for word in START_WORDS:
-		if word in START_WORDS:
-			return True
-	return false
+    START_WORDS = ['who', 'what', 'when', 'where', 'why', 'how', 'is', 'can', 'does', 'do']
+    for word in START_WORDS:
+        if word in START_WORDS:
+            return True
+    return false
 
 
-def talk(text: str):
-	waveglow = torch.hub.load('nvidia/DeepLearningExamples:torchhub', 'nvidia_waveglow')
-	waveglow = waveglow.remove_weightnorm(waveglow)
-	waveglow = waveglow.to('cpu')
-	waveglow.eval()
-	tacotron2 = torch.hub.load('nvidia/DeepLearningExamples:torchhub', 'nvidia_tacotron2')
-	tacotron2 = tacotron2.to('cpu')
-	tacotron2.eval()
-	# preprocessing
-	sequence = np.array(tacotron2.text_to_sequence(text, ['english_cleaners']))[None, :]
-	sequence = torch.from_numpy(sequence).to(device='cuda', dtype=torch.int64)
 
-	# run the models
-	with torch.no_grad():
-		_, mel, _, _ = tacotron2.infer(sequence)
-		audio = waveglow.infer(mel)
-		audio_numpy = audio[0].data.cpu().numpy()
-		rate = 22050
-		#write("audio.wav", rate, audio_numpy)
-		playsound('audio.wav')
+#################################################################################################
+# def talk(self, text: str):																    #
+#  	logging.info('starting waveglow')														    #
+# 	device_to_use = 'cpu' #'cuda' if torch.cuda.is_available() else 'cpu'					    #
+#  	waveglow = torch.hub.load('nvidia/DeepLearningExamples:torchhub', 'nvidia_waveglow')	    #
+#  	waveglow = waveglow.remove_weightnorm(waveglow)											    #
+#  	waveglow = waveglow.to(device_to_use)													    #
+#  	waveglow.eval()																			    #
+#  	tacotron2 = torch.hub.load('nvidia/DeepLearningExamples:torchhub', 'nvidia_tacotron2')	    #
+#  	tacotron2 = tacotron2.to(device_to_use)													    #
+#  	tacotron2.eval()																		    #
+#  	# preprocessing																			    #
+#  	sequence = np.array(tacotron2.text_to_sequence(text, ['english_cleaners']))[None, :]	    #
+#  	sequence = torch.from_numpy(sequence).to(device=device_to_use, dtype=torch.int64)		    #
+# 																							    #
+#     # run the models																		    #
+#  	with torch.no_grad():																	    #
+#  		_, mel, _, _ = tacotron2.infer(sequence)											    #
+# 		audio = waveglow.infer(mel)															    #
+#  		audio_numpy = audio[0].data.cpu().numpy()											    #
+#  		rate = 22050																		    #
+# 																							    #
+#  		write("/tmp/audio.wav", rate, audio_numpy)											    #
+#  		with open('/tmp/audio.wav', 'rb') as f:												    #
+#  			b = f.read()																	    #
+#  			play_obj = sa.play_buffer(b, 2, 2, 22050)										    #
+# 																							    #
+#  			play_obj.wait_done()															    #
+# 																							    #
+#  	return audio																			    #
+#################################################################################################
 
-		return audio
-
-
+def talk(audio):
+    print("Saati: " + audio)
+    engine.say(audio)
+    engine.runAndWait()
 
 def GivenCommand(test_mode=False):
-	Input = ""
-	if test_mode:
-		Input = input("Resp>>")
-	else:
-		k = sr.Recognizer()
-		with sr.Microphone() as source:
-			print("Listening...")
-			k.pause_threshold = 1
-			audio = k.listen(source)
-		try:
-			Input = k.recognize_google(audio, language='en-us')
-			print('You: ' + Input + '\n')
-		except sr.UnknownValueError:
-			talk('Gomen! I didn\'t get that! Try typing it here!')
-			Input = str(input('Command: '))
-	return Input	
+    Input = ""
+    if test_mode:
+        Input = input("Resp>>")
+    else:
+        k = sr.Recognizer()
+        with sr.Microphone() as source:
+            print("Listening...")
+            k.pause_threshold = 1
+            audio = k.listen(source)
+        try:
+            Input = k.recognize_google(audio, language='en-us')
+            print('You: ' + Input + '\n')
+        except sr.UnknownValueError:
+            talk('Gomen! I didn\'t get that! Try typing it here!')
+            Input = str(input('Command: '))
+    return Input
 
 def compute_sentiment(utterance: str) -> float:
-		nlp = pipeline("sentiment-analysis")
-		result = nlp(utterance)
-		score = result[0]['score']
-		if result[0]['label'] == 'NEGATIVE':
-			score = score * -1
+        nlp = pipeline("sentiment-analysis")
+        result = nlp(utterance)
+        score = result[0]['score']
+        if result[0]['label'] == 'NEGATIVE':
+            score = score * -1
 
-		# talk("The score was {}".format(score))
-		return score
+        # talk("The score was {}".format(score))
+        return score
 
 
 def reply():
-	sentiment = 1
-	instance = Saati(uuid.uuid4())
-	while sentiment > 0:
-		
-		instance.get_graph().draw('my_state_diagram.png', prog='dot')
-		responses = []
-		#user_input = GivenCommand() 
-		
-		logging.info('Computing reply')
-		for x in range(5):
-			user_input = GivenCommand() 
-			#input("Resp>>")
-			responce = smalltalk(user_input)[0]
-			talk(responce)
-			responses.append(responce) 
-			sentiment = sentiment +	 compute_sentiment(user_input) #compute_sentiment(user_input[0])['score']  
-			print(responses, sentiment, instance.state)
-			if sentiment > 0:
-				instance.next_state()
-			else:
-				print("Hey, i don't think this will work out.")
-				#instance.
-				return
+    '''
+    If pos or neg pos 5 to 1 relationship doesn't continue
+    If exceeds 11 pos 1 neg no challenge
+    you want not bliss but
+    '''
+    sentiment = 1
+    interactions = 1
+    
+    
+    instance = Saati(uuid.uuid4())
+    while sentiment > 0:
+
+        instance.get_graph().draw('my_state_diagram.png', prog='dot')
+        responses = []
+        user_input = GivenCommand()
+
+        logging.info('Computing reply')
+
+
+        responce = smalltalk(user_input)[0]
+
+        talk(responce)
+        responses.append(responce)
+        sentiment = sentiment +	 compute_sentiment(user_input)
+        interactions = interactions + 1
+        sync_ratio = sentiment / interactions
+        
+        logging.info("Responses: {} Sentiment: {}  Sync ratio {} | Current State {}".format(str(responses), str(sentiment), str(sync_ratio), str(instance.state)))
+        
+        if sync_ratio >= 1:
+                instance.next_state()
+            #return responce
+        elif sync_ratio >= 11:
+            talk("Hey, lets stay friends")
+            instance.friendzone()
+
+        else:
+            talk("Hey, i don't think this will work out.")
+            instance.friendzone()
+            return
 
 if __name__ == "__main__":
 	reply()
+	#st.title('saati Demo')
+	#starting_text = st.text_area('Hello!')
+
+	#if starting_text:
+	#	response = smalltalk(starting_text)
+	#	st.markdown(f'Saati: {response}')
 	#data = "My data read from the Web"
 	#print(data)
 	#modified_data = process_data(data)
