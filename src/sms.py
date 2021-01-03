@@ -41,6 +41,7 @@ def sms_reply():
 	body = request.values.get('Body', None)
 	
 
+	
 
 	# Add a message
 	
@@ -62,7 +63,7 @@ def sms_reply():
 
 	logging.info("Responses: {} Sentiment: {}  Sync ratio: {} Interactions: {}	| Current State {}".format(str(responses), str(sentiment), str(sync_ratio), str(instance.state)))
 
-	if 5 >= sync_ratio <= 11 and interactions < 10:
+	if 5 >= sync_ratio <= 11 or interactions < 10:
 		instance.next_state()	
 	else:
 		talk("Hey, lets stay friends")
