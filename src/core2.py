@@ -116,10 +116,10 @@ def is_a_question(utterance: str) -> bool:
 
 def talk(text: str):																	
 	logging.info('starting waveglow')
-	device_to_use = 'cpu' 'cuda' if torch.cuda.is_available() else 'cpu'						
-	if cpu:
+	device_to_use = 'cuda' if torch.cuda.is_available() else 'cpu'						
+	if device_to_use:
 		logging.info("Saati: " + audio)
-		engine.say(audio)
+		engine.say(text)
 		engine.runAndWait()
 	else:
 
@@ -182,7 +182,7 @@ def compute_sentiment(utterance: str) -> float:
 
 
 
-def ingest(request_method=GivenCommand, responce_method=talk):
+def local_ingest():
 	'''
 	If pos or neg pos 5 to 1 relationship doesn't continue
 	If exceeds 11 pos 1 neg no challenge
@@ -198,7 +198,7 @@ def ingest(request_method=GivenCommand, responce_method=talk):
 		#instance.get_graph().draw('my_state_diagram.png', prog='dot')
 		responses = []
 		user_input = GivenCommand()
-
+		
 		logging.info('Computing reply')
 
 
@@ -218,10 +218,11 @@ def ingest(request_method=GivenCommand, responce_method=talk):
 			talk("Hey, lets stay friends")
 			instance.friendzone()
 			#return
+		
 
 
 if __name__ == "__main__":
-	main()
+	local_ingest()
 	#st.title('saati Demo')
 	#starting_text = st.text_area('Hello!')
 
