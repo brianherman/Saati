@@ -29,7 +29,6 @@ import pyttsx3
 import speech_recognition as sr
 import torch
 import numpy as np
-import simpleaudio as sa
 
 import streamlit as st
 
@@ -72,9 +71,9 @@ class Saati(object):
 		self.machine.add_transition(trigger='friendzone', source='*', dest=None)
 		# Initialize models
 
-
+		
 			  
-def GivenCommand(test_mode=False):
+def GivenCommand(test_mode=True):
 	Input = ""
 	if test_mode:
 		Input = input("Resp>>")
@@ -94,7 +93,6 @@ def GivenCommand(test_mode=False):
 	return Input
 	
 
-	
 def smalltalk(utterance: str) -> List[str]:
 	logging.info('starting smalltalk')
 	mname = "facebook/blenderbot-3B"
@@ -115,41 +113,43 @@ def is_a_question(utterance: str) -> bool:
 
 
 
-def talk(self, text: str):																	
-	logging.info('starting waveglow')															
-	device_to_use = 'cpu' #'cuda' if torch.cuda.is_available() else 'cpu'						
-	waveglow = torch.hub.load('nvidia/DeepLearningExamples:torchhub', 'nvidia_waveglow')		
-	waveglow = waveglow.remove_weightnorm(waveglow)												
-	waveglow = waveglow.to(device_to_use)														
-	waveglow.eval()																				
-	tacotron2 = torch.hub.load('nvidia/DeepLearningExamples:torchhub', 'nvidia_tacotron2')		
-	tacotron2 = tacotron2.to(device_to_use)														
-	tacotron2.eval()																			
-	# preprocessing																				
-	sequence = np.array(tacotron2.text_to_sequence(text, ['english_cleaners']))[None, :]		
-	sequence = torch.from_numpy(sequence).to(device=device_to_use, dtype=torch.int64)			
-																								
-	# run the models																			
-	with torch.no_grad():																		
-		_, mel, _, _ = tacotron2.infer(sequence)												
-		audio = waveglow.infer(mel)																
-		audio_numpy = audio[0].data.cpu().numpy()												
-		rate = 22050																			
-																								
-		write("/tmp/audio.wav", rate, audio_numpy)												
-		with open('/tmp/audio.wav', 'rb') as f:													
-			b = f.read()																		
-			play_obj = sa.play_buffer(b, 2, 2, 22050)											
-																								
-			play_obj.wait_done()																
-																								
-	return audio																				
+def talk(text: str):																	
+	logging.info('starting waveglow')
+	device_to_use = 'cuda' if torch.cuda.is_available() else 'cpu'						
+	if device_to_use:
+		logging.info("Saati: " + audio)
+		engine.say(text)
+		engine.runAndWait()
+	else:
+
+		waveglow = torch.hub.load('nvidia/DeepLearningExamples:torchhub', 'nvidia_waveglow')		
+		waveglow = waveglow.remove_weightnorm(waveglow)												
+		waveglow = waveglow.to(device_to_use)														
+		waveglow.eval()																				
+		tacotron2 = torch.hub.load('nvidia/DeepLearningExamples:torchhub', 'nvidia_tacotron2')		
+		tacotron2 = tacotron2.to(device_to_use)														
+		tacotron2.eval()																			
+		# preprocessing																				
+		sequence = np.array(tacotron2.text_to_sequence(text, ['english_cleaners']))[None, :]		
+		sequence = torch.from_numpy(sequence).to(device=device_to_use, dtype=torch.int64)			
+
+		# run the models																			
+		with torch.no_grad():																		
+			_, mel, _, _ = tacotron2.infer(sequence)												
+			audio = waveglow.infer(mel)																
+			audio_numpy = audio[0].data.cpu().numpy()												
+			rate = 22050																			
+
+			write("/tmp/audio.wav", rate, audio_numpy)												
+			with open('/tmp/audio.wav', 'rb') as f:													
+				b = f.read()																		
+				play_obj = sa.play_buffer(b, 2, 2, 22050)											
+
+				play_obj.wait_done()																
+
+	#return audio																				
 
 
-def talk(audio):
-	print("Saati: " + audio)
-	engine.say(audio)
-	engine.runAndWait()
 
 def GivenCommand(test_mode=False):
 	Input = ""
@@ -176,11 +176,12 @@ def compute_sentiment(utterance: str) -> float:
 		if result[0]['label'] == 'NEGATIVE':
 			score = score * -1
 
-		# talk("The score was {}".format(score))
+		logging.info("The score was {}".format(score))
 		return score
 
 
-def reply():
+
+def local_ingest():
 	'''
 	If pos or neg pos 5 to 1 relationship doesn't continue
 	If exceeds 11 pos 1 neg no challenge
@@ -191,7 +192,7 @@ def reply():
 	
 	
 	instance = Saati(uuid.uuid4())
-	while sentiment > 0:
+	while True:
 
 		#instance.get_graph().draw('my_state_diagram.png', prog='dot')
 		responses = []
@@ -201,7 +202,7 @@ def reply():
 
 
 		responce = smalltalk(user_input)[0]
-
+		
 		talk(responce)
 		responses.append(responce)
 		sentiment = sentiment +	 compute_sentiment(user_input)
@@ -215,10 +216,12 @@ def reply():
 		else:
 			talk("Hey, lets stay friends")
 			instance.friendzone()
-			return
+			#return
+		
+
 
 if __name__ == "__main__":
-	reply()
+	local_ingest()
 	#st.title('saati Demo')
 	#starting_text = st.text_area('Hello!')
 
