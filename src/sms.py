@@ -1,11 +1,13 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 from twilio.rest import Client 
 from flask import Flask, request, redirect
 from twilio.twiml.messaging_response import MessagingResponse
 from core2 import Saati, compute_sentiment, smalltalk, compute_sentiment
-import uuid, logging
-import os
+import uuid, logging, os, pickle
 
+logging.getLogger('transitions').setLevel(logging.INFO)
 app = Flask(__name__)
 
 
@@ -27,7 +29,7 @@ def sms_reply():
 	client = Client(account_sid, auth_token) 
 
 	body = request.values.get('Body', None)
-
+	
 	sentiment = 1
 	interactions = 1
 	sync_ratio = sentiment / interactions
@@ -36,6 +38,12 @@ def sms_reply():
 
 	instance = Saati(uuid.uuid4())
 	#instance.get_graph().draw('my_state_diagram.png', prog='dot')
+	#if os.path.exists("state.pkl"):
+	#	m = pickle.loads(open('state.pkl','r'))
+	#else:
+	#
+	dump = pickle.dumps(instance)
+		
 	responses = []
 	#user_input = input #GivenCommand()
 
@@ -69,8 +77,8 @@ def sms_reply():
 	else:
 		talk("Hey, lets stay friends")
 		instance.friendzone()
-	
-	 
+
+	dump = pickle.dumps(instance, open('state.pkl','wb'))
 	
 	return str(responce)
 
