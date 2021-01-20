@@ -56,7 +56,7 @@ def guess_upvote_score(ctx: str):
 
     return __score(ctx, response)
 
-def dialog(UTTERANCE: str):
+def dialog(UTTERANCE: str) -> List:
 	from transformers import AutoModelForCausalLM, AutoTokenizer
 	import torch
 
@@ -64,18 +64,18 @@ def dialog(UTTERANCE: str):
 	model = AutoModelForCausalLM.from_pretrained("microsoft/DialoGPT-large")
 
 	# Let's chat for 5 lines
-	for step in range(5):
-		# encode the new user input, add the eos_token and return a tensor in Pytorch
-		new_user_input_ids = tokenizer.encode(input(">> User:") + tokenizer.eos_token, return_tensors='pt')
+        # encode the new user input, add the eos_token and return a tensor in Pytorch
+        new_user_input_ids = tokenizer.encode(input(">> User:") + tokenizer.eos_token, return_tensors='pt')
 
-		# append the new user input tokens to the chat history
-		bot_input_ids = torch.cat([chat_history_ids, new_user_input_ids], dim=-1) if step > 0 else new_user_input_ids
+        # append the new user input tokens to the chat history
+        bot_input_ids = torch.cat([chat_history_ids, new_user_input_ids], dim=-1) if step > 0 else new_user_input_ids
 
-		# generated a response while limiting the total chat history to 1000 tokens, 
-		chat_history_ids = model.generate(bot_input_ids, max_length=100, pad_token_id=tokenizer.eos_token_id) #Changing to 100 for tweets.
+        # generated a response while limiting the total chat history to 1000 tokens, 
+        chat_history_ids = model.generate(bot_input_ids, max_length=100, pad_token_id=tokenizer.eos_token_id) #Changing to 100 for tweets.
 
-		# pretty print last ouput tokens from bot
-		print("DialoGPT: {}".format(tokenizer.decode(chat_history_ids[:, bot_input_ids.shape[-1]:][0], skip_special_tokens=True)))
+        # pretty print last ouput tokens from bot
+        output = "DialoGPT: {}".format(tokenizer.decode(chat_history_ids[:, bot_input_ids.shape[-1]:][0], skip_special_tokens=True)))
+        return output
 
 def smallertalk(utterance: str):
 	from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
@@ -101,7 +101,7 @@ def answer_question(body):
 
 
 	logging.info('Computing reply')
-	responce = smallertalk(body)[0]
+	responce = dialog(body)#[0]
 	#resp = MessagingResponse()
 
 

@@ -18,7 +18,8 @@ from typing import List
 #!pip install transitions[diagrams] 
 #!pip install graphviz pygraphviz 
 #!brew install graphviz
-from transitions.extensions import GraphMachine as Machine
+#from transitions.extensions import GraphMachine as Machine
+from transitions import Machine
 
 import speech_recognition as sr
 import random
