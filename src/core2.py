@@ -1,4 +1,4 @@
-#!/usr/bin/env python3A
+#!/usr/bin/env python3AA
 import torch
 import numpy as np
 from scipy.io.wavfile import write
@@ -12,8 +12,8 @@ from transformers import (
 )
 from transformers import BlenderbotSmallTokenizer, BlenderbotForConditionalGeneration
 from transformers import pipeline
-import uuid
-from typing import List
+import uuid, json
+from typing import List, Any
 
 from pydantic import BaseModel
 from datetime import datetime
@@ -206,13 +206,18 @@ def compute_sentiment(utterance: str) -> float:
 
 class Event(BaseModel):
     uuid: str = uuid.uuid4()
-    utterance_ts: datetime = datetime.now() 
-    input: str
-    output: List[str]
-    sentiment: int
-    sync_ratio: float
-    interactions: int
+    timestamp: datetime = datetime.now()  
+    responses: List[str] = []
+    sentiment: int = 1
+    interactions: int = 1
+    sync_ratio: float = 1
+    state_machine: Any
 
+# function to add to JSON 
+def write_json(data, filename='data.json'): 
+    with open(filename,'a+') as f: 
+        json.dump(data, f, indent=4) 
+        f.write('\n')
 def local_ingest():
     """
     If pos or neg pos 5 to 1 relationship doesn't continue
@@ -221,69 +226,61 @@ def local_ingest():
     """
     instance = Saati(uuid.uuid4())
     
-    user_input = GivenCommand()
+    user_input = 'test' #input() #GivenCommand()
     
     from pathlib import Path
     import pickle
-    my_file = Path('event_log.dat')
-    if my_file.is_file():
-        save_state = pickle.load( open( "event_log.dat", "rb" ) )
-        pickled_state_machine = save_state.get('state_machine')
-        state_machine = pickle.loads(pickled_state_machine)
-        interactions = interactions
-        print(interactions)
-    else:
-        sentiment = interactions = 1
-        responses = []
+    my_file = Path('event_log.pkl')
+    state_machine = pickle.dumps(instance)
+    current_state = Event()
+    
+    write_json(current_state.json())
+    #if my_file.is_file():
+    #    current_state = pickle.loads(my_file)
+    #else:
+    #    current_state = pickle.dumps(current_state)
 
+    
     while True:
         # instance.get_graph().draw('my_state_diagram.png', prog='dot')
             
-        
         logging.info("Computing reply")
-
         responce = 'test' #smalltalk(user_input)[0]
-
         talk(responce)
-        responses.append(responce)
-        sentiment = sentiment + compute_sentiment(user_input)
-        interactions = interactions + 1
-        sync_ratio = sentiment / interactions
-        current_state = Event(
-            input=user_input,
-            output=responses,
-            sentiment=sentiment,
-            sync_ratio=sync_ratio,
-            interactions=interactions,
-            state_machine=instance,
-            )
+        current_state.responses.append(responce)
+        current_state.sentiment = current_state.sentiment + compute_sentiment(user_input)
+        current_state.interactions = current_state.interactions + 1
+        current_state.sync_ratio = current_state.sentiment / current_state.interactions
         logging.info(
 	    "Responses: {} Sentiment: {}  Sync ratio: {} Interactions: {}	| Current State {}".format(
-	    str(responce),
-	    str(sentiment),
-	    str(sync_ratio),
-	    str(interactions),
-	    str(instance.state),
+	    str(current_state.responses),
+	    str(current_state.sentiment),
+	    str(current_state.sync_ratio),
+	    str(current_state.interactions),
+	    str(current_state.state_machine),
 	    )
         )
         
-
-        if 5 >= sync_ratio <= 11:
+        if 5 <= current_state.sync_ratio <= 11:
             instance.next_state()
         else:
-            talk("Hey, lets stay friends")
+            print("Hey, lets stay friends")
             instance.friendzone()
-            # return
-        from pathlib import Path
-        import pickle
-        my_file = Path('event_log.dat')
-        if my_file.is_file():
-            save_state = pickle.load( open( "event_log.dat", "rb" ) )
-            pickled_state_machine = save_state.get('state_machine')
-            state_machine = pickle.loads(pickled_state_machine)
-            interactions = current_state.interactions
-            print(interactions)
-
+            return
+    #current_state.state_machine = pickle.dumps(instance)
+    
+        #save_state = pickle.load( open( "data.p", "rb" ) )
+        
+        #pickled_state_machine = save_state.get('state_machine')
+        #state_machine = pickle.loads(pickled_state_machine)
+        #current_state.state_machine = state_machine
+        
+        #write_json(data=current_state.json())
+    #else:
+    #pickle.dumps(current_state)
+         
+    #current_state.state_machine = pickle.dumps(instance)
+   
 if __name__ == "__main__":
     local_ingest()
     # st.title('saati Demo')
@@ -296,3 +293,4 @@ if __name__ == "__main__":
     # print(data)
     # modified_data = process_data(data)
     # print(modified_data)
+
