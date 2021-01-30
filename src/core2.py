@@ -1,4 +1,4 @@
-#!/usr/bin/env python3AA
+#!/usr/bin/env python3
 import torch
 import numpy as np
 from scipy.io.wavfile import write
@@ -40,7 +40,8 @@ import streamlit as st
 
 logging.basicConfig(level=logging.INFO)
 
-engine = pyttsx3.init("nsss")
+# engine = pyttsx3.init("nsss")
+
 
 class Saati(object):
     def __init__(self, name, debugMode=False):
@@ -197,18 +198,19 @@ def GivenCommand(test_mode=False):
 
 class Event(BaseModel):
     uuid: str = uuid.uuid4()
-    timestamp: datetime = datetime.now()  
+    timestamp: datetime = datetime.now()
     responses: List[str] = []
     sentiment: int = 1
     interactions: int = 1
     sync_ratio: float = 1
     state_machine: Any
 
-# function to add to JSON 
-def write_json(data, filename='event_log.json'): 
-    with open(filename,'a+') as f: 
-        json.dump(data, f, indent=4) 
-        f.write('\n')
+
+# function to add to JSON
+def write_json(data, filename="event_log.json"):
+    with open(filename, "a+") as f:
+        json.dump(data, f, indent=4)
+        f.write("\n")
 
 
 def compute_sentiment(utterance: str) -> float:
@@ -221,6 +223,7 @@ def compute_sentiment(utterance: str) -> float:
     logging.info("The score was {}".format(score))
     return score
 
+
 def local_ingest():
     """
     If pos or neg pos 5 to 1 relationship doesn't continue
@@ -229,56 +232,155 @@ def local_ingest():
     """
 
     instance = Saati(uuid.uuid4())
-    
+
     user_input = GivenCommand()
-    
+
     from pathlib import Path
     import pickle
-    my_file = Path('event_log.json')
+
+    my_file = Path("event_log.json")
     state_machine = pickle.dumps(instance)
     current_state = Event()
-    
+
     if my_file.is_file():
-        with open('event_log.json','r') as f:
+        with open("event_log.json", "r") as f:
             data = f.read()
-            save_state =  json.loads(data)  
+            save_state = json.loads(data)
     write_json(current_state.json())
-    #if my_file.is_file():
+    # if my_file.is_file():
     #    current_state = pickle.loads(my_file)
-    #else:
+    # else:
     #    current_state = pickle.dumps(current_state)
 
-    
     while True:
         # instance.get_graph().draw('my_state_diagram.png', prog='dot')
-            
+
         logging.info("Computing reply")
         responce = smalltalk(user_input)[0]
         talk(responce)
         current_state.responses.append(responce)
-        current_state.sentiment = current_state.sentiment + compute_sentiment(user_input)
+        current_state.sentiment = current_state.sentiment + compute_sentiment(
+            user_input
+        )
         current_state.interactions = current_state.interactions + 1
         current_state.sync_ratio = current_state.sentiment / current_state.interactions
         logging.info(
-	    "Responses: {} Sentiment: {}  Sync ratio: {} Interactions: {}	| Current State {}".format(
-	    str(current_state.responses),
-	    str(current_state.sentiment),
-	    str(current_state.sync_ratio),
-	    str(current_state.interactions),
-	    str(current_state.state_machine),
-	    )
+            "Responses: {} Sentiment: {}  Sync ratio: {} Interactions: {}	| Current State {}".format(
+                str(current_state.responses),
+                str(current_state.sentiment),
+                str(current_state.sync_ratio),
+                str(current_state.interactions),
+                str(current_state.state_machine),
+            )
         )
-        
+
         if 5 <= current_state.sync_ratio <= 11:
             instance.next_state()
         else:
             print("Hey, lets stay friends")
             instance.friendzone()
             return
-    #current_state.state_machine = pickle.dumps(instance)
-    
-     
-   
+    # current_state.state_machine = pickle.dumps(instance)
+
+
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from flask import Flask
+from flask import request
+from flask import render_template
+import os
+import speech_recognition as sr
+
+app = Flask(__name__)
+
+
+@app.route("/", methods=["POST", "GET"])
+def index():
+    if request.method == "POST":
+        file = request.files["audio_data"]
+        # with open('audio.wav', 'wb') as audio:
+        #    f.save(audio)
+        recognizer = sr.Recognizer()
+        audioFile = sr.AudioFile(file)
+        with audioFile as source:
+            data = recognizer.record(source)
+        transcript = recognizer.recognize_google(data, key=None)
+        print(transcript)
+        print("file uploaded successfully")
+        return render_template("index2.html", request="POST")
+    else:
+        return render_template("index2.html")
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
+
+
+def answer_question(body):
+
+    sentiment = 1
+
+    interactions = 1
+    sync_ratio = sentiment / interactions
+
+    logging.info("Computing reply")
+    responce = ["Hello"]  # smallertalk(body)  # [0]
+    # resp = MessagingResponse()
+    current_state = Event(
+        input=body,
+        output=responce,
+        sentiment=sentiment,
+        sync_ratio=sync_ratio,
+        interactions=interactions,
+        state_machine=instance,
+    )
+
+    from pathlib import Path
+
+    my_file = Path("event_log.dat")
+    if my_file.is_file():
+        save_state = pickle.load(open("event_log.dat", "rb"))
+        pickled_state_machine = save_state.get("state_machine")
+        state_machine = pickle.loads(pickled_state_machine)
+        interactions = current_state.interactions
+        print(interactions)
+
+    sentiment = sentiment + compute_sentiment(body)
+    interactions = interactions + 1
+
+    logging.info(
+        "Responses: {} Sentiment: {}  Sync ratio: {} Interactions: {}	| Current State {}".format(
+            str(responce),
+            str(sentiment),
+            str(sync_ratio),
+            str(interactions),
+            str(instance.state),
+        )
+    )
+    dump = pickle.dumps(instance)
+
+    save_state = {"state_machine": dump, "current_state": current_state.dict()}
+
+    with open("event_log.dat", "wb") as file:
+        data = pickle.dumps(save_state)
+        file.write(data)
+
+    # with open("save_state.json", "r+") as file:
+    # 	 data = json.load(file)
+    # 	 data.update(save_state)
+    # 	 file.seek(0)
+    # 	 json.dump(data, file)
+
+    # my_dict = {'1': 'aaa', '2': 'bbb', '3': 'ccc'}
+
+    if 5 >= sync_ratio <= 11 or interactions < 10:
+        instance.next_state()
+    else:
+        instance.friendzone()
+
+    return responce
+
+
 if __name__ == "__main__":
     local_ingest()
     # st.title('saati Demo')

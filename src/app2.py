@@ -6,15 +6,16 @@ from flask import render_template
 import os
 import speech_recognition as sr
 
+from web import answer_question
+
 app = Flask(__name__)
 
 
-
-@app.route("/", methods=['POST', 'GET'])
+@app.route("/", methods=["POST", "GET"])
 def index():
     if request.method == "POST":
-        file = request.files['audio_data']
-        #with open('audio.wav', 'wb') as audio:
+        file = request.files["audio_data"]
+        # with open('audio.wav', 'wb') as audio:
         #    f.save(audio)
         recognizer = sr.Recognizer()
         audioFile = sr.AudioFile(file)
@@ -22,8 +23,10 @@ def index():
             data = recognizer.record(source)
         transcript = recognizer.recognize_google(data, key=None)
         print(transcript)
-        print('file uploaded successfully')
-        return render_template('index2.html', request="POST")
+        response = answer_question(transcript)[0]
+        transcript = transcript + response
+        print("file uploaded successfully")
+        return render_template("index2.html", request="POST")
     else:
         return render_template("index2.html")
 
