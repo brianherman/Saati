@@ -27,13 +27,11 @@ from typing import List, Optional
 # from transitions.extensions import GraphMachine as Machine
 from transitions import Machine
 
-import speech_recognition as sr
 import random
 from datetime import datetime
 
 # Set up logging; The basic log level will be DEBUG
 import logging
-import pyttsx3
 import speech_recognition as sr
 import torch
 import numpy as np
@@ -43,7 +41,6 @@ import streamlit as st
 logging.basicConfig(level=logging.INFO)
 
 engine = pyttsx3.init("nsss")
-
 
 class Saati(object):
     def __init__(self, name, debugMode=False):
@@ -98,11 +95,14 @@ def GivenCommand(test_mode=True):
 
 
 def smalltalk(utterance: str) -> List[str]:
+
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
     logging.info("starting smalltalk")
     mname = "facebook/blenderbot-3B"
     model = BlenderbotForConditionalGeneration.from_pretrained(mname)
+    model.to(device)
     tokenizer = BlenderbotTokenizer.from_pretrained(mname)
-    inputs = tokenizer([utterance], return_tensors="pt")
+    inputs = tokenizer([utterance], return_tensors="pt").to(device)
     reply_ids = model.generate(**inputs)
     responses = [
         tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=True)
@@ -135,6 +135,7 @@ def talk(text: str):
     device_to_use = "cuda" if torch.cuda.is_available() else "cpu"
     if device_to_use:
         logging.info("Saati: " + text)
+
         engine.say(text)
         engine.runAndWait()
     else:
@@ -194,16 +195,6 @@ def GivenCommand(test_mode=False):
     return Input
 
 
-def compute_sentiment(utterance: str) -> float:
-    nlp = pipeline("sentiment-analysis")
-    result = nlp(utterance)
-    score = result[0]["score"]
-    if result[0]["label"] == "NEGATIVE":
-        score = score * -1
-
-    logging.info("The score was {}".format(score))
-    return score
-
 class Event(BaseModel):
     uuid: str = uuid.uuid4()
     timestamp: datetime = datetime.now()  
@@ -219,12 +210,24 @@ def write_json(data, filename='event_log.json'):
         json.dump(data, f, indent=4) 
         f.write('\n')
 
+
+def compute_sentiment(utterance: str) -> float:
+    nlp = pipeline("sentiment-analysis")
+    result = nlp(utterance)
+    score = result[0]["score"]
+    if result[0]["label"] == "NEGATIVE":
+        score = score * -1
+
+    logging.info("The score was {}".format(score))
+    return score
+
 def local_ingest():
     """
     If pos or neg pos 5 to 1 relationship doesn't continue
     If exceeds 11 pos 1 neg no challenge
     you wlant not bliss but
     """
+
     instance = Saati(uuid.uuid4())
     
     user_input = GivenCommand()
@@ -274,16 +277,7 @@ def local_ingest():
             return
     #current_state.state_machine = pickle.dumps(instance)
     
-        
-        #pickled_state_machine = save_state.get('state_machine')
-        #state_machine = pickle.loads(pickled_state_machine)
-        #current_state.state_machine = state_machine
-        
-        #write_json(data=current_state.json())
-    #else:
-    #pickle.dumps(current_state)
-         
-    #current_state.state_machine = pickle.dumps(instance)
+     
    
 if __name__ == "__main__":
     local_ingest()
@@ -297,4 +291,3 @@ if __name__ == "__main__":
     # print(data)
     # modified_data = process_data(data)
     # print(modified_data)
-

@@ -21,9 +21,23 @@ from transformers import (
     AutoModel,
     AutoModelForSequenceClassification,
 )
+
+from transformers import (TFAutoModelWithLMHead, 
+                         AutoTokenizer, 
+                         pipeline, 
+                         BlenderbotSmallTokenizer, 
+                         BlenderbotForConditionalGeneration, 
+                         Conversation)
+from transformers import BlenderbotSmallTokenizer, BlenderbotForConditionalGeneration
+from transformers import pipeline
+import random
+
+
 from transformers import LongformerModel, LongformerTokenizer
 from transformers import ReformerModelWithLMHead
 from transformers import LongformerTokenizer, LongformerForQuestionAnswering
+
+from transitions.extensions import HierarchicalGraphMachine as Machine
 import torch
 import pandas
 from dataclasses import dataclass
