@@ -41,7 +41,7 @@ def index():
                 data = recognizer.record(source)
             transcript = recognizer.recognize_google(data, key=None)
             print(transcript)
-    return render_template("index.html", transcript=transcript)
+    return render_template("index2.html", transcript=transcript)
 
 
 if __name__ == "__main__":
