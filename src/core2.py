@@ -214,10 +214,11 @@ class Event(BaseModel):
     state_machine: Any
 
 # function to add to JSON 
-def write_json(data, filename='data.json'): 
+def write_json(data, filename='event_log.json'): 
     with open(filename,'a+') as f: 
         json.dump(data, f, indent=4) 
         f.write('\n')
+
 def local_ingest():
     """
     If pos or neg pos 5 to 1 relationship doesn't continue
@@ -226,14 +227,18 @@ def local_ingest():
     """
     instance = Saati(uuid.uuid4())
     
-    user_input = 'test' #input() #GivenCommand()
+    user_input = GivenCommand()
     
     from pathlib import Path
     import pickle
-    my_file = Path('event_log.pkl')
+    my_file = Path('event_log.json')
     state_machine = pickle.dumps(instance)
     current_state = Event()
     
+    if my_file.is_file():
+        with open('event_log.json','r') as f:
+            data = f.read()
+            save_state =  json.loads(data)  
     write_json(current_state.json())
     #if my_file.is_file():
     #    current_state = pickle.loads(my_file)
@@ -245,7 +250,7 @@ def local_ingest():
         # instance.get_graph().draw('my_state_diagram.png', prog='dot')
             
         logging.info("Computing reply")
-        responce = 'test' #smalltalk(user_input)[0]
+        responce = smalltalk(user_input)[0]
         talk(responce)
         current_state.responses.append(responce)
         current_state.sentiment = current_state.sentiment + compute_sentiment(user_input)
@@ -269,7 +274,6 @@ def local_ingest():
             return
     #current_state.state_machine = pickle.dumps(instance)
     
-        #save_state = pickle.load( open( "data.p", "rb" ) )
         
         #pickled_state_machine = save_state.get('state_machine')
         #state_machine = pickle.loads(pickled_state_machine)
