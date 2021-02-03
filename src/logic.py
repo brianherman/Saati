@@ -2,26 +2,31 @@
 import torch
 import numpy as np
 from scipy.io.wavfile import write
-from transformers import (
-    TFAutoModelWithLMHead,
-    AutoTokenizer,
-    pipeline,
-    BlenderbotTokenizer,
-    BlenderbotForConditionalGeneration,
-    Conversation,
-)
+from inference_functions import blenderbot400M, compute_sentiment
 from transformers import BlenderbotSmallTokenizer, BlenderbotForConditionalGeneration
 from transformers import pipeline
-import uuid, json, pickle
+import uuid, json, pickle, logging
 from typing import List, Any
 
 from pydantic import BaseModel
 from datetime import datetime
 from typing import List, Optional
-from transitions.extensions import GraphMachine as Machine
+#from transitions.extensions import GraphMachine as Machine
+from transitions import Machine
 from pathlib import Path
 
+class Event(BaseModel):
+    uuid: str = uuid.uuid4()
+    timestamp: datetime = datetime.now()
+    responses: List[str] = []
+    sentiment: int = 1
+    interactions: int = 1
+    sync_ratio: float = 1
+    state_machine: Any
+
+
 class Saati(object):
+    
     def __init__(self, name=uuid.uuid4(), debugMode=False):
         # No anonymous superheroes on my watch! Every narcoleptic superhero gets
         # a name. Any name at all. SleepyMan. SlumberGirl. You get the idea.
@@ -31,7 +36,7 @@ class Saati(object):
         self.sentiment = 1
 
         # Interaction_number
-        self.interaction_number = 1
+        self.interactions = 1
         
         self.sync_ratio = 1.0
         
@@ -56,7 +61,7 @@ class Saati(object):
     
     def update_sync_ratio(self):
         """ Dear Diary, today I saved Mr. Whiskers. Again. """
-        self.sync_ratio = self.sentiment / self.interaction_number
+        self.sync_ratio = self.sentiment / self.interactions
         
     @property
     def is_disliked(self):
@@ -77,14 +82,14 @@ def answer_question(body, event_log='event_log.dat'):
     instance = Saati()
 
     logging.info("Computing reply")
-    responce = smallertalk(body)[0]
+    responce = blenderbot400M(body)[0]
     # resp = MessagingResponse()
     current_state = Event(
         input=body,
         output=responce,
-        sentiment=sentiment,
-        sync_ratio=sync_ratio,
-        interactions=interactions,
+        sentiment=instance.sentiment,
+        sync_ratio=instance.sync_ratio,
+        interactions=instance.interactions,
         state_machine=instance,
     )
 

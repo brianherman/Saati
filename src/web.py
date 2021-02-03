@@ -1,4 +1,4 @@
-#!/usr/bin/env python3OAA
+#!/usr/bin/env python3
 import gradio as gr
 from pydantic import BaseModel
 from datetime import datetime
@@ -6,9 +6,10 @@ from typing import List, Optional
 
 import csv, smtplib, uuid, logging, os, pickle, json
 from transitions.extensions import HierarchicalGraphMachine as Machine
-from core2 import Saati, compute_sentiment, smalltalk, compute_sentiment
+from core2 import compute_sentiment, smalltalk, compute_sentiment
+from logic import answer_question
 
-instance = Saati(uuid.uuid4())
+#instance = Saati(uuid.uuid4())
 
 
 class Event(BaseModel):
@@ -100,19 +101,7 @@ def dialog(UTTERANCE: str) -> List:
 responses = []
 # user_input = input #GivenCommand()
 
-def smallertalk(utterance: str):
-    from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-
-    tokenizer = AutoTokenizer.from_pretrained("facebook/blenderbot-400M-distill")
-    model = AutoModelForSeq2SeqLM.from_pretrained("facebook/blenderbot-400M-distill")
-    inputs = tokenizer([utterance], return_tensors="pt")
-    reply_ids = model.generate(**inputs)
-    responses = [
-        tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=True)
-        for g in reply_ids
-    ]
-    return responses
-
+"""
 def answer_question(body):
 
     sentiment = 1
@@ -176,7 +165,7 @@ def answer_question(body):
         instance.friendzone()
 
     return responce
-
+"""
 
 if __name__ == "__main__":
     output_text = gr.outputs.Textbox()

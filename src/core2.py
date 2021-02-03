@@ -12,7 +12,7 @@ from transformers import (
 )
 from transformers import BlenderbotSmallTokenizer, BlenderbotForConditionalGeneration
 from transformers import pipeline
-import uuid, json
+import uuid, json, pickle
 from typing import List, Any
 
 from pydantic import BaseModel
@@ -282,41 +282,8 @@ def local_ingest():
             return
     # current_state.state_machine = pickle.dumps(instance)
 
-
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-from flask import Flask
-from flask import request
-from flask import render_template
-import os
-import speech_recognition as sr
-
-app = Flask(__name__)
-
-
-@app.route("/", methods=["POST", "GET"])
-def index():
-    if request.method == "POST":
-        file = request.files["audio_data"]
-        # with open('audio.wav', 'wb') as audio:
-        #    f.save(audio)
-        recognizer = sr.Recognizer()
-        audioFile = sr.AudioFile(file)
-        with audioFile as source:
-            data = recognizer.record(source)
-        transcript = recognizer.recognize_google(data, key=None)
-        print(transcript)
-        print("file uploaded successfully")
-        return render_template("index2.html", request="POST")
-    else:
-        return render_template("index2.html")
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
-
-
 def answer_question(body):
+    instance = Saati(uuid.uuid4())
 
     sentiment = 1
 
