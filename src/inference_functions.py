@@ -7,6 +7,8 @@ from transformers import (
     Conversation,
 )
 
+import logging
+
 def blenderbot400M(utterance: str):
     from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
