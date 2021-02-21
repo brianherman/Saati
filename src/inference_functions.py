@@ -3,6 +3,7 @@ from transformers import (
     AutoTokenizer,
     pipeline,
     BlenderbotTokenizer,
+    BlenderbotSmallTokenizer,
     BlenderbotForConditionalGeneration,
     Conversation,
 )
@@ -31,3 +32,23 @@ def compute_sentiment(utterance: str) -> float:
 
     logging.info("The score was {}".format(score))
     return score
+
+#################################################################################################################
+# from transformers import AutoModelForMaskedLM, AutoTokenizer                                                  #
+#                                                                                                               #
+# speech_model = AutoModelForMaskedLM.from_pretrained("facebook/wav2vec2-base-960h")                            #
+# tokenizer = AutoTokenizer.from_pretrained("facebook/wav2vec2-base-960h", do_lower_case=True)                  #
+# from datasets import load_dataset                                                                             #
+# import soundfile as sf                                                                                        #
+#                                                                                                               #
+# # use "dummy" samples of validation split because `load_dataset("librispeech_asr", "clean")` requires > 50GB  #
+# libri_speech_dummy = load_dataset("patrickvonplaten/librispeech_asr_dummy", "clean", split="validation")      #
+#                                                                                                               #
+# # define function to read in audio file                                                                       #
+# def map_to_array(batch):                                                                                      #
+#   speech, _ = sf.read(batch["file"])                                                                          #
+#   batch["speech"] = speech                                                                                    #
+#   return batch                                                                                                #
+#                                                                                                               #
+# samples = libri_speech_dummy.map(map_to_array)[5:8]                                                           #
+#################################################################################################################

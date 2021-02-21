@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from twilio.rest import Client
+
 from flask import Flask
 from flask import request, sessions, jsonify
 from flask import render_template
@@ -8,9 +10,12 @@ import os
 import speech_recognition as sr
 from translate import Translator
 from core2 import answer_question
+from config import *
+from twilio.twiml.messaging_response import MessagingResponse
+
 
 app = Flask(__name__)
-#app.config["DEBUG"] = True # turn off in prod
+app.config["DEBUG"] = True # turn off in prod
 translator = Translator(MODEL_PATH)
 
 @app.route("/input", methods=["POST", "GET"])
@@ -62,8 +67,34 @@ def get_prediction():
 def signUpUser():
     user =  request.form['username'];
     password = request.form['password'];
-    return json.dumps({'status':'OK','user':user,'pass':password});
+    return json.dumps({'status':'OK','user':user,'pass':password})
+
+@app.route("/sms", methods=["GET", "POST"])
+def sms_reply():
+    """Respond to incoming calls with a simple text message."""
     
+    # Start our TwiML response
+    resp = MessagingResponse()
+    account_sid = os.environ["TWILIO_ACCOUNT_SID"]
+    auth_token = os.environ["TWILIO_AUTH_TOKEN"]
+
+    client = Client(account_sid, auth_token)
+
+    incoming_msg = request.values.get("Body", None)
+
+    responded = False
+    if incoming_msg:
+        answer_question(incoming_msg)
+        #Lookup a user
+        
+        
+
+    if not responded:
+        pass
+
+
+
+
 if __name__ == "__main__":
     app.run(debug=True)
 

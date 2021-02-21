@@ -6,7 +6,7 @@ from flask import Flask, request, redirect
 from twilio.twiml.messaging_response import MessagingResponse
 from core2 import Saati#, compute_sentiment
 from inference_functions import compute_sentiment, blenderbot400M
-import uuid, logging, os, pickle, json
+import uuid, logging, os, pickle, json, datetime
 from logic import answer_question
 
 logging.getLogger("transitions").setLevel(logging.INFO)
@@ -82,6 +82,7 @@ def sms_reply():
 
         logging.info("Computing reply")
         resp = MessagingResponse()
+        
         #answer_question(incoming_msg)
         responce = blenderbot400M(incoming_msg)[0]
         message = client.messages.create(
@@ -120,7 +121,7 @@ def sms_reply():
                          'sync_ratio' : sync_ratio,
                          'interactions': interactions,
                          'instance.state' : instance.state,
-                         'request_time':  date_created}
+                         'request_time':  str(datetime.datetime.now())}
         with open(DATA_FILENAME, mode='w', encoding='utf-8') as feedsjson:
             event_log.append(current_state)
             json.dump(event_log, feedsjson)

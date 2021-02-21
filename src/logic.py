@@ -101,16 +101,16 @@ def answer_question(body, event_log="event_log.dat"):
         interactions = current_state.interactions
         print(interactions)
 
-    sentiment = sentiment + compute_sentiment(body)
+    sentiment = current_state.sentiment + compute_sentiment(body)
     instance.sentiment = sentiment
-    interactions = interactions + 1
+    interactions = current_state.interactions + 1
     instance.interactions = interactions
     instance.update_sync_ratio()
     logging.info(
         "Responses: {} Sentiment: {}  Sync ratio: {} Interactions: {}	| Current State {}".format(
             str(responce),
             str(sentiment),
-            str(sync_ratio),
+            str(instance.sync_ratio),
             str(interactions),
             str(instance.state),
         )

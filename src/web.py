@@ -170,4 +170,4 @@ def answer_question(body):
 if __name__ == "__main__":
     output_text = gr.outputs.Textbox()
     audio_out = gr.outputs.Audio()
-    gr.Interface(answer_question, "textbox", output_text, "textbox").launch()
+    gr.Interface(answer_question, "textbox", output_text, "textbox").launch(share=True)
