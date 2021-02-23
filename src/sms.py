@@ -1,4 +1,4 @@
-#!/usr/bin/env pythonA
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 from twilio.rest import Client
@@ -85,10 +85,11 @@ def sms_reply():
         
         #answer_question(incoming_msg)
         responce = blenderbot400M(incoming_msg)[0]
+        
         message = client.messages.create(
             body=responce,  # Join Earth's mightiest heroes. Like Kevin Bacon.",
             from_="17784035044",
-            to="+13316255728",
+            to=request.values['From'],
         )
         # Get users phone to respond.
         resp.message(responce)
