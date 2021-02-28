@@ -9,7 +9,7 @@ from flask import render_template
 import os
 import speech_recognition as sr
 from translate import Translator
-from core2 import answer_question
+from .core2 import answer_question
 from config import *
 from twilio.twiml.messaging_response import MessagingResponse
 
@@ -25,8 +25,10 @@ def index():
         file = request.files["audio_data"]
         # with open('audio.wav', 'wb') as audio:
         #    f.save(audio)
+        import pdb; pdb.set_trace()
         recognizer = sr.Recognizer()
         audioFile = sr.AudioFile(file)
+        
         with audioFile as source:
             data = recognizer.record(source)
         transcript = recognizer.recognize_google(data, key=None)
