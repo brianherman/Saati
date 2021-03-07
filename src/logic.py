@@ -95,7 +95,7 @@ def answer_question(body, DATA_FILENAME="state.json"):
     else:
         with open(DATA_FILENAME, mode='w', encoding='utf-8') as f:
             json.dump([], f)
-            
+    state = {}  
     if event_log != []:
         state = event_log[-1]
     sentiment = state.get('sentiment', 1)
@@ -146,7 +146,7 @@ def answer_question(body, DATA_FILENAME="state.json"):
                      'sentiment': sentiment,
                      'sync_ratio' : sync_ratio,
                      'interactions': interactions,
-                     'instance.state' : pickle.dumps(instance),
+                     #'instance_path' : pickle.dumps(instance),
                      'request_time':  str(datetime.now())}
     with open(DATA_FILENAME, mode='w', encoding='utf-8') as feedsjson:
         event_log.append(current_state)
