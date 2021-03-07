@@ -12,8 +12,12 @@ from transformers import (
 )
 from transformers import BlenderbotSmallTokenizer, BlenderbotForConditionalGeneration
 from transformers import pipeline
-import uuid
-from typing import List
+import uuid, json, pickle
+from typing import List, Any
+
+from pydantic import BaseModel
+from datetime import datetime
+from typing import List, Optional
 
 
 #!pip install streamlit
@@ -35,6 +39,8 @@ import numpy as np
 import streamlit as st
 
 logging.basicConfig(level=logging.INFO)
+
+# engine = pyttsx3.init("nsss")
 
 
 class Saati(object):
@@ -90,6 +96,7 @@ def GivenCommand(test_mode=True):
 
 
 def smalltalk(utterance: str) -> List[str]:
+
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     logging.info("starting smalltalk")
     mname = "facebook/blenderbot-3B"
@@ -102,7 +109,6 @@ def smalltalk(utterance: str) -> List[str]:
         tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=True)
         for g in reply_ids
     ]
-    model.to("cuda")
     return responses
 
 
@@ -129,7 +135,8 @@ def talk(text: str):
     logging.info("starting waveglow")
     device_to_use = "cuda" if torch.cuda.is_available() else "cpu"
     if device_to_use:
-        logging.info("Saati: " + audio)
+        logging.info("Saati: " + text)
+
         engine.say(text)
         engine.runAndWait()
     else:
@@ -189,6 +196,23 @@ def GivenCommand(test_mode=False):
     return Input
 
 
+class Event(BaseModel):
+    uuid: str = uuid.uuid4()
+    timestamp: datetime = datetime.now()
+    responses: List[str] = []
+    sentiment: int = 1
+    interactions: int = 1
+    sync_ratio: float = 1
+    state_machine: Any
+
+
+# function to add to JSON
+def write_json(data, filename="event_log.json"):
+    with open(filename, "a+") as f:
+        json.dump(data, f, indent=4)
+        f.write("\n")
+
+
 def compute_sentiment(utterance: str) -> float:
     nlp = pipeline("sentiment-analysis")
     result = nlp(utterance)
@@ -206,38 +230,122 @@ def local_ingest():
     If exceeds 11 pos 1 neg no challenge
     you wlant not bliss but
     """
-    sentiment = 1
-    interactions = 1
 
     instance = Saati(uuid.uuid4())
-    while True:
 
+    user_input = GivenCommand()
+
+    from pathlib import Path
+    import pickle
+
+    my_file = Path("event_log.json")
+    state_machine = pickle.dumps(instance)
+    current_state = Event()
+
+    if my_file.is_file():
+        with open("event_log.json", "r") as f:
+            data = f.read()
+            save_state = json.loads(data)
+    write_json(current_state.json())
+    # if my_file.is_file():
+    #    current_state = pickle.loads(my_file)
+    # else:
+    #    current_state = pickle.dumps(current_state)
+
+    while True:
         # instance.get_graph().draw('my_state_diagram.png', prog='dot')
-        responses = []
-        user_input = GivenCommand()
 
         logging.info("Computing reply")
-
         responce = smalltalk(user_input)[0]
-
         talk(responce)
-        responses.append(responce)
-        sentiment = sentiment + compute_sentiment(user_input)
-        interactions = interactions + 1
-        sync_ratio = sentiment / interactions
-
+        current_state.responses.append(responce)
+        current_state.sentiment = current_state.sentiment + compute_sentiment(
+            user_input
+        )
+        current_state.interactions = current_state.interactions + 1
+        current_state.sync_ratio = current_state.sentiment / current_state.interactions
         logging.info(
             "Responses: {} Sentiment: {}  Sync ratio: {} Interactions: {}	| Current State {}".format(
-                str(responses), str(sentiment), str(sync_ratio), str(instance.state)
+                str(current_state.responses),
+                str(current_state.sentiment),
+                str(current_state.sync_ratio),
+                str(current_state.interactions),
+                str(current_state.state_machine),
             )
         )
 
-        if 5 >= sync_ratio <= 11:
+        if 5 <= current_state.sync_ratio <= 11:
             instance.next_state()
         else:
-            talk("Hey, lets stay friends")
+            print("Hey, lets stay friends")
             instance.friendzone()
-            # return
+            return
+    # current_state.state_machine = pickle.dumps(instance)
+
+def answer_question(body):
+    instance = Saati(uuid.uuid4())
+
+    sentiment = 1
+
+    interactions = 1
+    sync_ratio = sentiment / interactions
+
+    logging.info("Computing reply")
+    responce = ["Hello"]  # smallertalk(body)  # [0]
+    # resp = MessagingResponse()
+    current_state = Event(
+        input=body,
+        output=responce,
+        sentiment=sentiment,
+        sync_ratio=sync_ratio,
+        interactions=interactions,
+        state_machine=instance,
+    )
+
+    from pathlib import Path
+
+    my_file = Path("event_log.dat")
+    if my_file.is_file():
+        save_state = pickle.load(open("event_log.dat", "rb"))
+        pickled_state_machine = save_state.get("state_machine")
+        state_machine = pickle.loads(pickled_state_machine)
+        interactions = current_state.interactions
+        print(interactions)
+
+    sentiment = sentiment + compute_sentiment(body)
+    interactions = interactions + 1
+
+    logging.info(
+        "Responses: {} Sentiment: {}  Sync ratio: {} Interactions: {}	| Current State {}".format(
+            str(responce),
+            str(sentiment),
+            str(sync_ratio),
+            str(interactions),
+            str(instance.state),
+        )
+    )
+    dump = pickle.dumps(instance)
+
+    save_state = {"state_machine": dump, "current_state": current_state.dict()}
+
+    with open("event_log.dat", "wb") as file:
+        data = pickle.dumps(save_state)
+        file.write(data)
+
+    # with open("save_state.json", "r+") as file:
+    # 	 data = json.load(file)
+    # 	 data.update(save_state)
+    # 	 file.seek(0)
+    # 	 json.dump(data, file)
+
+    # my_dict = {'1': 'aaa', '2': 'bbb', '3': 'ccc'}
+
+    if 5 >= sync_ratio <= 11 or interactions < 10:
+        instance.next_state()
+    else:
+        instance.friendzone()
+
+    return responce
 
 
 if __name__ == "__main__":

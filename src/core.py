@@ -1,7 +1,7 @@
 import os
 import sys
 import datetime
-import pyttsx3
+#import pyttsx3
 import speech_recognition as sr
 
 # import wikipedia
