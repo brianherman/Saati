@@ -105,7 +105,7 @@ pyasn1==0.4.8
 pyasn1-modules==0.2.8
 llvmlite==0.35.0
 MarkupSafe==1.1.1
-mistune==0.8.4
+mistune==2.0.3
 nbclient==0.5.1
 nbconvert==6.0.7
 nbformat==5.0.8
