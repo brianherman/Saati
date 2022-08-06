@@ -279,7 +279,7 @@ six==1.15.0
 smmap==3.0.4
 SoundFile==0.10.3.post1
 SpeechRecognition==3.8.1
-streamlit==0.73.1
+streamlit==1.11.1
 terminado==0.9.1
 testpath==0.4.4
 threadpoolctl==2.1.0
